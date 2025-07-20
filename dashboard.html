@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>تطبيق جواهر فري فاير</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Tajawal', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #000000;
+      color: white;
+    }
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background: #111;
+      padding: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav button {
+      flex: 1;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+    }
+    nav button.active {
+      border-bottom: 2px solid #00ffcc;
+      font-weight: bold;
+    }
+    .page {
+      display: none;
+      padding: 20px;
+      animation: fadeIn 0.4s;
+    }
+    .page.active {
+      display: block;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      padding: 20px;
+      border-radius: 15px;
+      margin: 20px auto;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      max-width: 500px;
+      text-align: center;
+    }
+    .points {
+      font-size: 32px;
+      color: #00ffc3;
+      margin-bottom: 15px;
+    }
+    button.action {
+      background: #00c896;
+      color: white;
+      border: none;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.3s;
+    }
+    button.action:hover {
+      background: #00ffcc;
+      color: #000;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: none;
+      font-size: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #444;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0 }
+      to { opacity: 1 }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <button class="active" onclick="showPage('home', event)">
+    <i class="fa-solid fa-house"></i> الرئيسية
+  </button>
+  <button onclick="showPage('top', event)">
+    <i class="fa-solid fa-chart-line"></i> الترتيب
+  </button>
+  <button onclick="showPage('redeem', event)">
+    <i class="fa-solid fa-gem"></i> الشحن
+  </button>
+</nav>
+
+<!-- الرئيسية -->
+<div class="page active" id="home">
+  <div class="card">
+    <h2>مرحباً <span id="username"></span></h2>
+    <p>رصيدك من النقاط:</p>
+    <div class="points" id="points">0</div>
+    <p id="clicks-left">الضغطات المتبقية اليوم: 10</p>
+    <button class="action" onclick="earnPoints()">
+      <i class="fa-solid fa-hand-pointer"></i> اضغط للحصول على نقاط
+    </button>
+
+    <button class="action" onclick="watchAd()">
+  <i class="fa-solid fa-video"></i> مشاهدة إعلان
+</button>
+  </div>
+</div>
+
+<!-- الترتيب -->
+<div class="page" id="top">
+  <div class="card">
+    <h2><i class="fa-solid fa-ranking-star"></i> أعلى المستخدمين</h2>
+    <table id="usersTable">
+      <thead>
+        <tr><th>الترتيب</th><th>الاسم</th><th>النقاط</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- الشحن -->
+<div class="page" id="redeem">
+  <div class="card">
+    <h2><i class="fa-solid fa-credit-card"></i> طلب شحن الجواهر</h2>
+    <input type="text" id="ffid" placeholder="أدخل معرفك في لعبة فري فاير" />
+    <input type="number" id="diamonds" placeholder="عدد الجواهر المطلوبة" />
+    <button class="action" onclick="redeemPoints()">
+      <i class="fa-solid fa-paper-plane"></i> إرسال الطلب
+    </button>
+  </div>
+</div>
+
+<script>
+  const MAX_CLICKS_PER_DAY = 10;
+  const INSTAGRAM_URL = "https://www.instagram.com/y6vux?igsh=MXhiZmN1djB0c21m";
+
+  let username = localStorage.getItem("username");
+  if (!username) {
+    username = "لاعب_" + Math.floor(Math.random() * 10000);
+    localStorage.setItem("username", username);
+  }
+  document.getElementById("username").textContent = username;
+
+  let points = parseInt(localStorage.getItem("points")) || 0;
+  let clicksToday = parseInt(localStorage.getItem("clicksToday")) || 0;
+  let lastDate = localStorage.getItem("lastDate") || "";
+  const today = new Date().toLocaleDateString();
+  if (today !== lastDate) {
+    clicksToday = 0;
+    localStorage.setItem("clicksToday", "0");
+    localStorage.setItem("lastDate", today);
+    localStorage.setItem("subscribedToday", "false");
+  }
+
+  function updateDisplay() {
+    document.getElementById("points").textContent = points;
+    document.getElementById("clicks-left").textContent = `الضغطات المتبقية اليوم: ${MAX_CLICKS_PER_DAY - clicksToday}`;
+    localStorage.setItem("points", points);
+    updateLeaderboard();
+  }
+
+  function showPage(id, event) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    event.target.classList.add("active");
+    if (id === 'top') renderLeaderboard();
+  }
+
+  function earnPoints() {
+    if (clicksToday >= MAX_CLICKS_PER_DAY) {
+      alert("❌ لقد وصلت إلى الحد الأقصى اليوم.");
+      return;
+    }
+    points += 5;
+    clicksToday++;
+    localStorage.setItem("clicksToday", clicksToday);
+    updateDisplay();
+  }
+
+  
+  function redeemPoints() {
+    const id = document.getElementById("ffid").value.trim();
+    const amount = parseInt(document.getElementById("diamonds").value);
+
+    if (!id || !amount || isNaN(amount)) {
+      alert("❌ يرجى ملء جميع الحقول.");
+      return;
+    }
+
+    const cost = amount;
+    if (points >= cost) {
+      points -= cost;
+      alert(`✅ سيتم إرسال طلب شحن ${amount} جوهرة إلى المعرف ${id}.`);
+      updateDisplay();
+    } else {
+      alert("❌ لا توجد نقاط كافية.");
+    }
+  }
+
+  function updateLeaderboard() {
+    let allUsers = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+    let existing = allUsers.find(u => u.name === username);
+    if (existing) {
+      existing.points = points;
+    } else {
+      allUsers.push({ name: username, points: points });
+    }
+    localStorage.setItem("leaderboard", JSON.stringify(allUsers));
+  }
+
+  function renderLeaderboard() {
+    let allUsers = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+    allUsers.sort((a, b) => b.points - a.points);
+    const tbody = document.querySelector("#usersTable tbody");
+    tbody.innerHTML = "";
+    allUsers.forEach((user, index) => {
+      tbody.innerHTML += `<tr><td>${index + 1}</td><td>${user.name}</td><td>${user.points}</td></tr>`;
+    });
+  }
+
+  updateDisplay();
+ function watchAd() {
+  const lastAdTime = parseInt(localStorage.getItem("lastAdTime") || "0");
+  const now = Date.now();
+
+  const FOUR_HOURS = 60 * 1000;
+
+  if (now - lastAdTime < FOUR_HOURS) {
+    const remaining = Math.ceil((FOUR_HOURS - (now - lastAdTime)) / (60 * 1000));
+    alert(`❌ يمكنك مشاهدة إعلان آخر بعد ${remaining} دقيقة.`);
+    return;
+  }
+
+  // افتح الإعلان (ضع هنا رابط الإعلان أو صفحة)
+  window.open("https://your-ad-link.com", "_blank");
+
+  // منح النقاط
+  points += 15;
+  localStorage.setItem("points", points);
+  localStorage.setItem("lastAdTime", now.toString());
+  updateDisplay();
+  alert("✅ شكراً لمشاهدتك الإعلان! تم إضافة 15 نقطة.");
+} 
+</script>
+
+</body>
+</html>
